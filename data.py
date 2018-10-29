@@ -55,6 +55,29 @@ def export_images(db_path, out_dir, flat=False, limit=-1):
             if count % 1000 == 0:
                 print('Finished', count, 'images')
 
+def export_and_save_images(db_path, out_dir, flat=False, limit=-1):
+    print('Exporting', db_path, 'to', out_dir)
+    env = lmdb.open(db_path, map_size=1099511627776,
+                    max_readers=100, readonly=True)
+    count = 0
+    with env.begin(write=False) as txn:
+        cursor = txn.cursor()
+        for key, val in cursor:
+            if not flat:
+                image_out_dir = join(out_dir, '/'.join(key[:6]))
+            else:
+                image_out_dir = out_dir
+            if not exists(image_out_dir):
+                os.makedirs(image_out_dir)
+            image_out_path = join(image_out_dir, key + '.jpg')
+            img = cv2.imdecode(
+                numpy.fromstring(val, dtype=numpy.uint8), 1)
+            cv2.imwrite(image_out_path, img)
+            count += 1
+            if count == limit:
+                break
+            if count % 1000 == 0:
+                print('Finished', count, 'images')
 
 def main():
     parser = argparse.ArgumentParser()
